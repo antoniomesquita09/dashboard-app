@@ -32,32 +32,26 @@ const filterContainersMemory = (containers: any[]) => {
   )
 }
 
+const filterContainersCPU = (containers: any[]) => {
+  return containers?.reduce((accumulator: number, currentValue: { cpu_usage: string; }) =>
+    accumulator + parseInt(currentValue.cpu_usage?.replace('n', '')), 0
+  )
+}
+
 const SimpleLineChart = () => {
   const { data: cpus } = useQuery('cpu', fetchCPU, { refetchInterval: 5000 })
   const { data: memories } = useQuery('memory', fetchMemory, { refetchInterval: 5000 })
   const { data: kubernetes } = useQuery('kubernetes', fetchKubernetes, { refetchInterval: 5000 })
 
-  // const parsedKube = kubernetes?.forEach?.map(({id, pod_name, pod_status, date_time, containers}) => ({
-  //   // ...elem,
-  //   id,
-  //   pod_name,
-  //   pod_status,
-  //   date_time,
-  //   containers,
-  //   total_memory: filterContainersMemory(containers)
-  //   // pod_name: elem.pod_name,
-  //   // date_time: elem.date_time,
-  //   // totalMemory: filterContainersMemory(elem.containers)
-  // }))
-
   const parsedKube = kubernetes?.map(elem => (
-    elem?.map(({id, pod_name, pod_status, date_time, containers}) => ({
+    elem?.map(({ id, pod_name, pod_status, date_time, containers }) => ({
       id,
       pod_name,
       pod_status,
       date_time,
       containers,
-      total_memory: filterContainersMemory(containers)
+      total_memory: filterContainersMemory(containers),
+      total_cpu: filterContainersCPU(containers)
     }))
   ))
 
@@ -147,10 +141,10 @@ const SimpleLineChart = () => {
             }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="total_memory" />
+            <XAxis dataKey="total_cpu" />
             <YAxis
               label={{
-                value: "Ki ",
+                value: "n ",
                 style: { textAnchor: 'middle' },
                 position: 'left',
                 offset: 0,
@@ -158,7 +152,7 @@ const SimpleLineChart = () => {
             />
             <Tooltip />
             <Legend />
-            <Line type="monotone" isAnimationActive={false} dot={false} dataKey="total_memory" stroke="#eb3449" />
+            <Line type="monotone" isAnimationActive={false} dot={false} dataKey="total_cpu" stroke="#eb3449" />
             {/* <Line type="monotone" dataKey="amt" stroke="#ff0000" /> */}
           </LineChart>
 
