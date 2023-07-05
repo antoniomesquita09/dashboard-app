@@ -21,15 +21,47 @@ const fetchMemory = async () => {
   const { data } = await axios.get("http://localhost:8081/memory");
   return data;
 };
-// const fetchKubernetes = async () => {
-//   const { data } = await axios.get("http://localhost:8081/kubernetes");
-//   return data;
-// };
+const fetchKubernetes = async () => {
+  const { data } = await axios.get("http://localhost:8081/kubernetes");
+  return data;
+};
+
+const filterContainersMemory = (containers: any[]) => {
+  return containers?.reduce((accumulator: number, currentValue: { memory_usage: string; }) =>
+    accumulator + parseInt(currentValue.memory_usage?.replace('Ki', '')), 0
+  )
+}
 
 const SimpleLineChart = () => {
-  const { data: cpus } = useQuery('cpu', fetchCPU)
-  const { data: memories } = useQuery('memory', fetchMemory)
-  // const { data: kubernetes, isLoading } = useQuery('kubernetes', fetchKubernetes)
+  const { data: cpus } = useQuery('cpu', fetchCPU, { refetchInterval: 5000 })
+  const { data: memories } = useQuery('memory', fetchMemory, { refetchInterval: 5000 })
+  const { data: kubernetes } = useQuery('kubernetes', fetchKubernetes, { refetchInterval: 5000 })
+
+  // const parsedKube = kubernetes?.forEach?.map(({id, pod_name, pod_status, date_time, containers}) => ({
+  //   // ...elem,
+  //   id,
+  //   pod_name,
+  //   pod_status,
+  //   date_time,
+  //   containers,
+  //   total_memory: filterContainersMemory(containers)
+  //   // pod_name: elem.pod_name,
+  //   // date_time: elem.date_time,
+  //   // totalMemory: filterContainersMemory(elem.containers)
+  // }))
+
+  const parsedKube = kubernetes?.map(elem => (
+    elem?.map(({id, pod_name, pod_status, date_time, containers}) => ({
+      id,
+      pod_name,
+      pod_status,
+      date_time,
+      containers,
+      total_memory: filterContainersMemory(containers)
+    }))
+  ))
+
+  console.log(parsedKube)
   
   return (
     <>
@@ -45,6 +77,7 @@ const SimpleLineChart = () => {
           left: 20,
           bottom: 5
         }}
+
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date_time" />
@@ -60,7 +93,7 @@ const SimpleLineChart = () => {
         />
         <Tooltip />
         <Legend />
-        <Line type="monotone" dataKey="percentage" stroke="#82ca9d" />
+        <Line type="monotone" isAnimationActive={false} dot={false} dataKey="percentage" stroke="#82ca9d" />
       </LineChart>
 
       <hr style={{ borderTop: "3px solid #bbb", margin: "20px 0", width: "100%" }} />
@@ -89,41 +122,82 @@ const SimpleLineChart = () => {
         />
         <Tooltip />
         <Legend />
-        <Line type="monotone" dataKey="used" stroke="#ff0000" />
+        <Line type="monotone" isAnimationActive={false} dot={false} dataKey="used" stroke="#ff0000" />
         {/* <Line type="monotone" dataKey="total" stroke="#82ca9d" /> */}
-        <Line type="monotone" dataKey="committed" stroke="#8884d8" />
+        <Line type="monotone" isAnimationActive={false} dot={false} dataKey="committed" stroke="#8884d8" />
       </LineChart>
 
       <hr style={{ borderTop: "3px solid #bbb", margin: "20px 0", width: "100%" }} />
       <h2>Kubernetes Chart</h2>
 
-      <LineChart
-        width={600}
-        height={400}
-        data={cpus}
-        margin={{
-          top: 15,
-          right: 30,
-          left: 20,
-          bottom: 5
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="percentage" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        {/* <Line
-          type="monotone"
-          dataKey="pv"
-          stroke="#8884d8"
-          // activeDot={{ r: 8 }}
-        /> */}
-        <Line type="monotone" dataKey="percentage" stroke="#82ca9d" />
-        {/* <Line type="monotone" dataKey="amt" stroke="#ff0000" /> */}
-      </LineChart>
+      {parsedKube?.map((pod) => (
+        <>
+          <br/>
+          <h3>Pod: {pod[0].pod_name} - CPU</h3>
+          <LineChart
+            id={pod[0].pod_name}
+            width={600}
+            height={400}
+            data={pod}
+            margin={{
+              top: 15,
+              right: 30,
+              left: 20,
+              bottom: 5
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="total_memory" />
+            <YAxis
+              label={{
+                value: "Ki ",
+                style: { textAnchor: 'middle' },
+                position: 'left',
+                offset: 0,
+              }}
+            />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" isAnimationActive={false} dot={false} dataKey="total_memory" stroke="#eb3449" />
+            {/* <Line type="monotone" dataKey="amt" stroke="#ff0000" /> */}
+          </LineChart>
+
+          <br/>
+          <h3>Pod: {pod[0].pod_name} - Memory</h3>
+          <LineChart
+            id={pod[0].pod_name}
+            width={600}
+            height={400}
+            data={pod}
+            margin={{
+              top: 15,
+              right: 30,
+              left: 20,
+              bottom: 5
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="total_memory" />
+            <YAxis
+              label={{
+                value: "Ki ",
+                style: { textAnchor: 'middle' },
+                position: 'left',
+                offset: 0,
+              }}
+            />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" isAnimationActive={false} dot={false} dataKey="total_memory" stroke="#34ebe8" />
+            {/* <Line type="monotone" dataKey="amt" stroke="#ff0000" /> */}
+          </LineChart>
+        </>
+      ))}
+
     </>
   );
 };
 
 export default SimpleLineChart;
+
+
